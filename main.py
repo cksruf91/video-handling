@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from frame import VideoSpliter
+from chunking import VideoChunker
 
 
 class Arguments(argparse.ArgumentParser):
@@ -27,7 +27,7 @@ class Main:
     def run(self):
         if self.args.batch == 'split':
             self.args.save.mkdir(exist_ok=True, parents=True)
-            batch = VideoSpliter(self.args.file, self.args.save)
+            batch = VideoChunker(self.args.file, self.args.save)
         else:
             raise ValueError('Batch must be either "split" or "prompt"')
 

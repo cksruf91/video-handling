@@ -10,7 +10,7 @@ from model.image import ImageHandler
 from model.video import Video
 
 
-class VideoSpliter:
+class VideoChunker:
 
     def __init__(self, video: Path, save_dir: Path):
         self.video = Video(str(video))
