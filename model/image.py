@@ -1,4 +1,5 @@
 import base64
+from typing import Self
 import io
 from copy import deepcopy
 from pathlib import Path
@@ -27,8 +28,12 @@ class ImageHandler:
     def image(self) -> np.ndarray:
         return self._image
 
-    def cvt_color(self, method: int):
-        self._image = cv2.cvtColor(self._image, method)
+    def grayscale(self) -> Self:
+        self._image = cv2.cvtColor(self._image, cv2.COLOR_BGR2GRAY)
+        return self
+
+    def rgb(self) -> Self:
+        self._image = cv2.cvtColor(self._image, cv2.COLOR_BGR2RGB)
         return self
 
     def copy(self):
