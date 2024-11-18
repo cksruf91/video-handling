@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from openai import OpenAI
 
 from model.image import ImageHandler
@@ -41,3 +43,21 @@ class OpenAiVisionClient:
                 {"role": 'user', "content": self.contents}
             ]
         )
+
+
+class OpenAiSTTClient:
+    def __init__(self):
+        self.client = OpenAI()
+        self.model = "whisper-1"
+        self.audio_file = None
+
+    def set_audio_file(self, file: Path):
+        self.audio_file = file
+
+    def call(self) -> str:
+        audio_file = open(self.audio_file, "rb")
+        transcription = self.client.audio.transcriptions.create(
+            model=self.model,
+            file=audio_file
+        )
+        return transcription.text
