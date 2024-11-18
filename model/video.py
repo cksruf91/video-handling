@@ -41,4 +41,4 @@ class Video:
 
     @property
     def frame_count(self) -> int:
-        return int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        return self._frame_count

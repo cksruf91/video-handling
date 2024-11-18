@@ -40,10 +40,10 @@ class ImageDescriptor:
         group_ids = set()
         for _file in self.image_dir.glob('*.jpg'):
             group_ids.add(int(_file.name.split('_')[1]))
-        return list(group_ids)[:10]
+        return list(group_ids)
 
     def to_time_string(self, frame_nums: tuple[int, int]) -> str:
-        def minutes_sec(s):
+        def minutes_sec(s) -> str:
             sec = round(s / self.video.fps)
             return f"{int(sec // 60):02d}:{int(sec % 60):02d}"
 
@@ -54,7 +54,7 @@ class ImageDescriptor:
 
     def run(self):
         video_desc = []
-        for gid in ProgressBar.init(self.group_id):
+        for gid in ProgressBar(self.group_id, bar_length=50):
             self.open_ai.clear()
             self.open_ai.add_prompt(self.prompt)
 

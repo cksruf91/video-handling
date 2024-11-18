@@ -9,9 +9,7 @@ class Arguments(argparse.ArgumentParser):
 
     def __init__(self):
         super().__init__()
-        self.add_argument(
-            '-b', '--batch', default='chunk', choices=['chunk', 'desc']
-        )
+        self.add_argument('-b', '--batch', default='chunk', choices=['chunk', 'desc'])
         self.add_argument('-v', '--video', type=str)
         self.add_argument('-s', '--save', type=str)
         self.add_argument('-i', '--image', type=str, default=None)
