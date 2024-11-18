@@ -65,7 +65,7 @@ class ImageDescriptor:
                 frame = ImageHandler(file_name).rgb()
                 self.open_ai.add_image(frame)
 
-            response = self.open_ai.call()
+            response = self.open_ai.call()  # temperature=0.3,
             try:
                 answer = json.loads(response.choices[0].message.content)
             except json.decoder.JSONDecodeError as e:

@@ -1,25 +1,32 @@
 import argparse
 from pathlib import Path
 
-from chunking import VideoChunker
-from describe import ImageDescriptor
-from extract_audio import AudioTextExtractor
+from core.chunking import VideoChunker
+from core.describe import ImageDescriptor
+from core.extract_audio import AudioTextExtractor
+from core.extract_keyword import KeywordExtractor
 
 
 class Arguments(argparse.ArgumentParser):
 
     def __init__(self):
         super().__init__()
-        self.add_argument('-t', '--task', default='chunk', choices=['chunk', 'desc', 'stt'])
-        self.add_argument('-v', '--video', type=str)
-        self.add_argument('-s', '--save', type=str)
-        self.add_argument('-i', '--image', type=str, default=None)
-        self.add_argument('-a', '--audio', type=str, default=None)
+        self.add_argument('-t', '--task', default='chunk', choices=['chunk', 'desc', 'stt', 'keyword'])
+        self.add_argument('-v', '--video', type=str, default=None, help='Video file to read')
+        self.add_argument('-o', '--output', type=str, default=None, help='output parquet file')
+        self.add_argument('-s', '--stt', type=str, default=None, help='stt result text file')
+        self.add_argument('-i', '--image', type=str, default=None, help='video chunking result store directory')
+        self.add_argument('-a', '--audio', type=str, default=None, help='extracted audio file')
         arg = self.parse_args()
 
         self.task = arg.task
-        self.video = Path(arg.video)
-        self.save = Path(arg.save)
+
+        if arg.video is not None:
+            self.video = Path(arg.video)
+        if arg.stt is not None:
+            self.stt = Path(arg.stt)
+        if arg.output is not None:
+            self.output = Path(arg.output)
         if arg.image is not None:
             self.image = Path(arg.image)
         if arg.audio is not None:
@@ -31,22 +38,26 @@ class Main:
         self.args = Arguments()
 
     def run(self):
-        self.args.save.parent.mkdir(exist_ok=True, parents=True)
         if self.args.task == 'chunk':
+            self.args.image.mkdir(exist_ok=True, parents=True)
             task = VideoChunker(
-                video=self.args.video, save_dir=self.args.save
+                video_file=self.args.video, save_dir=self.args.image
             )
         elif self.args.task == 'desc':
+            self.args.output.parent.mkdir(exist_ok=True, parents=True)
             task = ImageDescriptor(
-                image_dir=self.args.image, video_file=self.args.video, save_file=self.args.save
+                image_dir=self.args.image, video_file=self.args.video, save_file=self.args.output
             )
+        elif self.args.task == 'keyword':
+            task = KeywordExtractor(output_file=self.args.output)
         elif self.args.task == 'stt':
+            self.args.stt.parent.mkdir(exist_ok=True, parents=True)
             self.args.audio.parent.mkdir(exist_ok=True, parents=True)
             task = AudioTextExtractor(
-                file=self.args.video, audio_file=self.args.audio, save_file=self.args.save
+                file=self.args.video, audio_file=self.args.audio, save_file=self.args.stt
             )
         else:
-            raise ValueError('Task must be either "chunk" or "desc" or "stt"')
+            raise ValueError('Task must be either "chunk","desc","keyword" or "stt"')
 
         task.run()
 

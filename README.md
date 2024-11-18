@@ -7,16 +7,13 @@ video-handling
   * opencv-python==4.10.0.84
   * pydub==0.25.1
 
-1. video frame 분할
+* 수행 명령어
 ```shell
-python main.py -t chunk -v "{file}.mp4" -s "{save_dir}"
-```
-2. STT
-```shell
-python main.py -t stt -v "{file}.mp4" -a "{save_file}.mp3" -s "{save_file}.txt"
-```
+export VIDEO="some/video.mp4" 
+export NAME="SameCoolName"
 
-3. 이미지 설명(openAI)
-```shell
-python main.py -t chunk -v "{file}.mp4" -i "{save_dir}" -s "{dataframe}.parquet"
+python main.py -t chunk -v $VIDEO -i "data/image/$NAME" # chunking
+python main.py -t desc -v $VIDEO -i "data/image/$NAME" -o "data/output/$NAME.parquet" # desc
+python main.py -t keyword -v $VIDEO -o "data/output/$NAME.parquet" # keyword
+python main.py -t stt -v $VIDEO -a "data/audio/$NAME.mp3" -s "data/output/$NAME.txt"  # mp3 
 ```

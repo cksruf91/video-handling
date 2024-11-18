@@ -12,8 +12,8 @@ from utile.progress_bar import ProgressBar
 
 class VideoChunker:
 
-    def __init__(self, video: Path, save_dir: Path):
-        self.video = Video(video)
+    def __init__(self, video_file: Path, save_dir: Path):
+        self.video = Video(video_file)
         self.save_dir = save_dir
         print(f'save dir : {self.save_dir.absolute()}')
         self.total_frames = self.video.frame_count
@@ -30,7 +30,7 @@ class VideoChunker:
             np.random.randint(0, 255, self.video.frame_size)
         ))
         group_id, similarity = 0, 0.
-        task = ProgressBar(self.video.iter_frame(), max_value=self.video.frame_count)
+        task = ProgressBar(self.video.iter_frame(), max_value=self.video.frame_count, bar_length=50)
         for i, frame in enumerate(task):
             frame: ImageHandler
             current_frame = frame.copy().resize(500, 250).grayscale().flat()

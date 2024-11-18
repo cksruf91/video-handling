@@ -38,12 +38,13 @@ class OpenAiVisionClient:
         )
         return self
 
-    def call(self) -> ChatCompletion:
+    def call(self, **kwargs) -> ChatCompletion:
         return self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": 'user', "content": self.contents}
-            ]
+            ],
+            **kwargs
         )
 
 
@@ -57,11 +58,12 @@ class OpenAiSTTClient:
         self.audio_file = file
         return self
 
-    def call(self) -> str:
+    def call(self, **kwargs) -> str:
         audio_file = open(self.audio_file, "rb")
         transcription = self.client.audio.transcriptions.create(
             model=self.model,
-            file=audio_file
+            file=audio_file,
+            **kwargs
         )
         return transcription.text
 
@@ -85,9 +87,10 @@ class OpenAiClient:
         self.messages = []
         return self
 
-    def call(self) -> str:
+    def call(self, **kwargs) -> str:
         completion = self.client.chat.completions.create(
             model=self.model,
-            messages=self.messages
+            messages=self.messages,
+            **kwargs
         )
         return completion.choices[0].message.content
