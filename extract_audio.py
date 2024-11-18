@@ -15,9 +15,10 @@ class AudioTextExtractor:
         print(f'Extracting audio -> {self.audio_file}')
         self.audio_handler.extract_audio(self.audio_file)
         print('\tL Done')
-        self.open_ai.set_audio_file(self.audio_file)
         print(f'STT request progress...')
-        text = self.open_ai.call()
+        text = self.open_ai \
+            .set_audio_file(self.audio_file) \
+            .call()
         self.write_text(text=text)
         print(f'\tL output -> {self.save_file}')
 

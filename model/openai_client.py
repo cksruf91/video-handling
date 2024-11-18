@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Self
 
 from openai import OpenAI
+from openai.types.chat.chat_completion import ChatCompletion
 
 from model.image import ImageHandler
 
@@ -12,10 +14,10 @@ class OpenAiVisionClient:
         self.model = "gpt-4o"
         self.contents = []
 
-    def clear(self):
+    def clear(self) -> None:
         self.contents = []
 
-    def add_prompt(self, prompt):
+    def add_prompt(self, prompt) -> Self:
         self.contents.append(
             {
                 "type": "text",
@@ -24,7 +26,7 @@ class OpenAiVisionClient:
         )
         return self
 
-    def add_image(self, image: ImageHandler):
+    def add_image(self, image: ImageHandler) -> Self:
         base64_image = image.encoding()
         self.contents.append(
             {
@@ -36,7 +38,7 @@ class OpenAiVisionClient:
         )
         return self
 
-    def call(self):
+    def call(self) -> ChatCompletion:
         return self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -51,8 +53,9 @@ class OpenAiSTTClient:
         self.model = "whisper-1"
         self.audio_file = None
 
-    def set_audio_file(self, file: Path):
+    def set_audio_file(self, file: Path) -> Self:
         self.audio_file = file
+        return self
 
     def call(self) -> str:
         audio_file = open(self.audio_file, "rb")
@@ -61,3 +64,30 @@ class OpenAiSTTClient:
             file=audio_file
         )
         return transcription.text
+
+
+class OpenAiClient:
+    def __init__(self):
+        self.client = OpenAI()
+        self.model = "gpt-4o-mini"
+        self.messages = []
+        self._role_pool = ["system", "assistant", "user"]
+
+    def add_prompt(self, role: str, text: str) -> Self:
+        if role not in self._role_pool:
+            raise ValueError(f"Role {role} not in {self._role_pool}")
+        self.messages.append(
+            {"role": role, "content": text},
+        )
+        return self
+
+    def clear(self) -> Self:
+        self.messages = []
+        return self
+
+    def call(self) -> str:
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            messages=self.messages
+        )
+        return completion.choices[0].message.content
