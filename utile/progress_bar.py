@@ -46,6 +46,7 @@ class ProgressBar:
 
     def __next__(self) -> Any:
         sec = time.time() - self._start
+        eta = (self.max - self._i) * (sec / max(self._i, 1))
         if self.max:
             dot_num = int((self._i + 1) / self.max * self._bar_length)
             dot = self._bar_graph * dot_num
@@ -53,9 +54,10 @@ class ProgressBar:
             sys.stdout.write(
                 f'\r[time:{self.minutes_sec(sec)}] '
                 f'{self._prefix} [{dot}{empty}] {self._i}/{self.max}({self._i / self.max * 100:3.2f}%) '
-                f'{self._suffix}')
+                f'[ETA:{self.minutes_sec(eta)}] {self._suffix}')
         else:
-            sys.stdout.write(f'\r {self._prefix} [{self._i}/?] {self._suffix}')
+            sys.stdout.write(f'\r[time:{self.minutes_sec(sec)}] {self._prefix} [ Status Unknown ... ] '
+                             f'[{self._i}/??] {self._suffix}')
         self._i += 1
         try:
             return next(self._iter)
