@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from model.audio import Audio
@@ -5,23 +6,24 @@ from model.openai_client import OpenAiSTTClient
 
 
 class AudioTextExtractor:
-    def __init__(self, file: Path, audio_file: Path, save_file: Path):
+    def __init__(self, video_file: Path, audio_dir: Path, output_file: Path):
+        print('Extracting text from audio...')
         self.open_ai = OpenAiSTTClient()
-        self.audio_handler = Audio(file)
-        self.audio_file = audio_file
-        self.save_file = save_file
+        self.audio_handler = Audio(video_file)
+        self.audio_file = audio_dir.joinpath('audio.mp3')
+        self.audio_file.parent.mkdir(exist_ok=True, parents=True)
+        self.output_file = output_file
+        self.output = json.load(self.output_file.open('r'))
+        print(f'\tL audio file : {self.audio_file}')
+        print(f'\tL output file : {self.output_file}')
 
     def run(self) -> None:
-        print(f'Extracting audio -> {self.audio_file}')
+        print('\tL extracting audio files...')
         self.audio_handler.extract_audio(self.audio_file)
-        print('\tL Done')
-        print(f'STT request progress...')
+        print('\tL STT request progress...')
         text = self.open_ai \
             .set_audio_file(self.audio_file) \
-            .call()
-        self.write_text(text=text)
-        print(f'\tL output -> {self.save_file}')
-
-    def write_text(self, text: str) -> None:
-        with open(self.save_file, 'w') as f:
-            f.write(text)
+            .call(temperature=0)
+        self.output.append({'stt': text})
+        print('\tL Done')
+        json.dump(self.output, self.output_file.open('w'), ensure_ascii=False, indent=2)

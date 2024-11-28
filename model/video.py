@@ -13,11 +13,13 @@ class _IterVideo:
     def __iter__(self):
         return self
 
-    def __next__(self) -> ImageHandler:
+    def __next__(self) -> tuple[ImageHandler, float]:
         _available, frame = self.capture.read()
+        milli_sec = self.capture.get(cv2.CAP_PROP_POS_MSEC)
         if not _available:
+            self.release()
             raise StopIteration('Done')
-        return ImageHandler(frame)
+        return ImageHandler(frame), milli_sec
 
     def release(self):
         self.capture.release()

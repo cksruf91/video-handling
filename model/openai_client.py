@@ -1,3 +1,4 @@
+import base64
 from pathlib import Path
 from typing import Self
 
@@ -26,8 +27,14 @@ class OpenAiVisionClient:
         )
         return self
 
-    def add_image(self, image: ImageHandler) -> Self:
-        base64_image = image.encoding()
+    def add_image(self, image: ImageHandler | Path) -> Self:
+        if isinstance(image, ImageHandler):
+            base64_image = image.encoding()
+        elif isinstance(image, Path):
+            base64_image = base64.b64encode(image.open('rb').read()).decode('utf-8')
+        else:
+            raise RuntimeError('image must be ImageHandler or Path')
+
         self.contents.append(
             {
                 "type": "image_url",

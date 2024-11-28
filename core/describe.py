@@ -3,20 +3,24 @@ from pathlib import Path
 
 import polars as pl
 
-from model.image import ImageHandler
 from model.openai_client import OpenAiVisionClient
 from model.video import Video
 from utile.progress_bar import ProgressBar
 
 
 class ImageDescriptor:
-    def __init__(self, image_dir: Path, video_file: Path, save_file: Path):
-        self.save_file = save_file
-        self.save_file.parent.mkdir(parents=True, exist_ok=True)
-        self.image_dir = image_dir
+    def __init__(self, video_file: Path, image_dir: Path, output_file: Path):
+        print("Describe frames...")
+        self.output_file = output_file
+        self.output_file.parent.mkdir(parents=True, exist_ok=True)
+        self.image_dir = image_dir.joinpath('frames')
         self.video = Video(video_file)
         self.open_ai = OpenAiVisionClient()
         self.group_id = self._extract_group_id()
+
+        print(f'\tL target file : {video_file}')
+        print(f'\tL save dir : {self.image_dir}')
+        print(f'\tL output file : {self.output_file}')
 
         self.prompt = """
         1. 다음에 주의해서 이미지를 설명해줘
@@ -42,49 +46,37 @@ class ImageDescriptor:
             group_ids.add(int(_file.name.split('_')[1]))
         return list(group_ids)
 
-    def to_time_string(self, frame_nums: tuple[int, int]) -> str:
-        def minutes_sec(s) -> str:
-            sec = round(s / self.video.fps)
-            return f"{int(sec // 60):02d}:{int(sec % 60):02d}"
-
-        start = frame_nums[0]
-        end = frame_nums[1]
-
-        return f"{minutes_sec(start)} ~ {minutes_sec(end)}"
-
     def run(self):
         video_desc = []
-        for gid in ProgressBar(self.group_id, bar_length=50):
+        for gid in ProgressBar(self.group_id, bar_length=50, prefix='\t'):
             self.open_ai.clear()
             self.open_ai.add_prompt(self.prompt)
 
-            frame_no = []
+            times = []
             files = sorted(list(self.image_dir.glob(f'frame_{gid:04d}_*.jpg')))
             for file_name in files:
-                frame_no.append(int(file_name.name.split('_')[-1].replace('.jpg', '')))
-                frame = ImageHandler(file_name).rgb()
-                self.open_ai.add_image(frame)
+                times.append(file_name.name.split('_')[-2])
+                self.open_ai.add_image(file_name)
 
             response = self.open_ai.call()  # temperature=0.3,
             try:
-                answer = json.loads(response.choices[0].message.content)
+                content = json.loads(response.choices[0].message.content)
             except json.decoder.JSONDecodeError as e:
-                answer = {
+                content = {
                     "desc": response.choices[0].message.content,
                     "text": str(e)
                 }
-            answer['frame'] = (min(frame_no), max(frame_no))
-            answer['groupId'] = gid
-            video_desc.append(answer)
+            content['position'] = f"{min(times)}~{max(times)}"
+            content['groupId'] = gid
+            if isinstance(content['text'], list):
+                content['text'] = ' '.join(content['text'])
+            video_desc.append(content)
 
-        for vd in video_desc:
-            if isinstance(vd['text'], list):
-                vd['text'] = ' '.join(vd['text'])
+        desc_df = pl.DataFrame(video_desc, orient='row').sort('position')
 
-        desc_df = pl.DataFrame(
-            video_desc, orient='row'
-        ).with_columns(
-            pl.col('frame').map_elements(self.to_time_string, return_dtype=pl.String).alias('time')
-        ).sort('time')
-
-        desc_df.write_parquet(self.save_file)
+        if self.output_file.suffix == '.parquet':
+            desc_df.write_parquet(self.output_file)
+        elif self.output_file.suffix == '.json':
+            json.dump(desc_df.to_dicts(), self.output_file.open('w'), ensure_ascii=False, indent=2)
+        else:
+            RuntimeError(f'file extension not supported : {self.output_file.suffix}')

@@ -21,14 +21,16 @@ class ProgressBar:
         task.update(prefix='prefix', suffix='suffix')
         time.sleep(0.1)
     """
-    def __init__(self, iterable: Iterable[Any], max_value: int = 0, bar_length: int = 30):
+
+    def __init__(self, iterable: Iterable[Any], max_value: int = 0, bar_length: int = 30, prefix: str = '',
+                 subfix: str = '', ):
         self.iterable = iterable
         self.max = max_value
         if (self.max == 0) and (hasattr(self.iterable, '__len__')):
             method = getattr(self.iterable, '__len__')
             self.max = method()
-        self._prefix = ''
-        self._suffix = ''
+        self._prefix = prefix
+        self._suffix = subfix
         self._i = 0
         self._bar_graph = '█'
         self._bar_length = bar_length
@@ -40,20 +42,20 @@ class ProgressBar:
         self._iter = iter(self.iterable)
         return self
 
-    def update(self, prefix: str = '', suffix: str = '') -> None:
-        self._prefix = prefix
-        self._suffix = suffix
+    def update(self, prefix: str = None, suffix: str = None) -> None:
+        self._prefix = self._prefix if prefix is None else prefix
+        self._suffix = self._suffix if suffix is None else suffix
 
     def __next__(self) -> Any:
         sec = time.time() - self._start
         eta = (self.max - self._i) * (sec / max(self._i, 1))
         if self.max:
-            dot_num = int((self._i + 1) / self.max * self._bar_length)
+            dot_num = int(self._i / self.max * self._bar_length)
             dot = self._bar_graph * dot_num
             empty = '.' * (self._bar_length - dot_num)
             sys.stdout.write(
-                f'\r[time:{self.minutes_sec(sec)}] '
-                f'{self._prefix} [{dot}{empty}] {self._i}/{self.max}({self._i / self.max * 100:3.2f}%) '
+                f'\r {self._prefix} [time:{self.minutes_sec(sec)}] '
+                f'[{dot}{empty}] {self._i}/{self.max}({self._i / self.max * 100:3.2f}%) '
                 f'[ETA:{self.minutes_sec(eta)}] {self._suffix}')
         else:
             sys.stdout.write(f'\r[time:{self.minutes_sec(sec)}] {self._prefix} [ Status Unknown ... ] '

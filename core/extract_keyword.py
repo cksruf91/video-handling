@@ -1,6 +1,5 @@
+import json
 from pathlib import Path
-
-import polars as pl
 
 from model.openai_client import OpenAiClient
 from utile.progress_bar import ProgressBar
@@ -8,9 +7,11 @@ from utile.progress_bar import ProgressBar
 
 class KeywordExtractor:
     def __init__(self, output_file: Path):
+        print('Extracting keywords...')
         self.output_file = output_file
-        self.frame = pl.read_parquet(self.output_file)
+        self.data = json.load(self.output_file.open('r'))
         self.open_ai = OpenAiClient()
+        print(f'\tL output file : {self.output_file}')
 
         self.system_prompt = """
         당신은 언어 전문가 입니다.
@@ -24,14 +25,12 @@ class KeywordExtractor:
         """
 
     def run(self) -> None:
-        keywords = []
-        for row in ProgressBar(self.frame.iter_rows(named=True), max_value=len(self.frame), bar_length=50):
-            full_text = row['desc'] + row['text']
+        for row in ProgressBar(self.data, max_value=len(self.data), bar_length=50, prefix='\t'):
+            if (row.get('desc') is None) | (row.get('text') is None):
+                continue
+            full_text = row['desc'] + ' ' + row['text']
             self.open_ai \
                 .add_prompt(role='system', text=self.system_prompt) \
                 .add_prompt(role='system', text=self.user_prompt.format(full_text=full_text))
-            keywords.append(self.open_ai.call())
-
-        self.frame.with_columns(
-            pl.Series(name='keyword', values=keywords)
-        ).write_parquet(self.output_file)
+            row['keyword'] = self.open_ai.call()
+        json.dump(self.data, self.output_file.open('w'), ensure_ascii=False, indent=2)
