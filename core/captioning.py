@@ -1,21 +1,24 @@
 import json
+import time
+from json.decoder import JSONDecodeError
 from pathlib import Path
 
 import polars as pl
 
-from model.openai_client import OpenAiVisionClient
+from client.openai.vision import OpenAIVisionClient, OpenAIBatchVisionClient
 from model.video import Video
 from utile.progress_bar import ProgressBar
 
 
-class ImageDescriptor:
+class ImageCaptionWriter:
+
     def __init__(self, video_file: Path, image_dir: Path, output_file: Path):
         print("Describe frames...")
         self.output_file = output_file
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
         self.image_dir = image_dir.joinpath('frames')
         self.video = Video(video_file)
-        self.open_ai = OpenAiVisionClient()
+        self.open_ai = OpenAIVisionClient()
         self.group_id = self._extract_group_id()
 
         print(f'\tL target file : {video_file}')
@@ -49,19 +52,19 @@ class ImageDescriptor:
     def run(self):
         video_desc = []
         for gid in ProgressBar(self.group_id, bar_length=50, prefix='\t'):
-            self.open_ai.clear()
-            self.open_ai.add_prompt(self.prompt)
+            self.open_ai.prompt.clear()
+            self.open_ai.prompt.add_text(self.prompt)
 
             times = []
             files = sorted(list(self.image_dir.glob(f'frame_{gid:04d}_*.jpg')))
             for file_name in files:
                 times.append(file_name.name.split('_')[-2])
-                self.open_ai.add_image(file_name)
+                self.open_ai.prompt.add_image(file_name)
 
             response = self.open_ai.call()  # temperature=0.3,
             try:
                 content = json.loads(response.choices[0].message.content)
-            except json.decoder.JSONDecodeError as e:
+            except JSONDecodeError as e:
                 content = {
                     "desc": response.choices[0].message.content,
                     "text": str(e)
@@ -80,3 +83,57 @@ class ImageDescriptor:
             json.dump(desc_df.to_dicts(), self.output_file.open('w'), ensure_ascii=False, indent=2)
         else:
             RuntimeError(f'file extension not supported : {self.output_file.suffix}')
+
+
+class BatchImageCaptionWriter(ImageCaptionWriter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.open_ai = OpenAIBatchVisionClient(Path('temp/batch_data.jsonl'))
+        self.open_ai.flush_file()
+
+    def run(self):
+        temp = {}
+        for gid in ProgressBar(self.group_id, bar_length=50, prefix='\t create batch file'):
+            self.open_ai.prompt.add_text(self.prompt)
+
+            times = []
+            files = sorted(list(self.image_dir.glob(f'frame_{gid:04d}_*.jpg')))
+            for file_name in files:
+                times.append(file_name.name.split('_')[-2])
+                self.open_ai.prompt.add_image(file_name)
+            _id = f"request_{gid}"
+            temp[_id] = {
+                'time': f"{min(times)}~{max(times)}", 'groupId': gid
+            }
+            self.open_ai.write_prompt(request_id=_id)
+
+        self.open_ai \
+            .upload() \
+            .create_batch() \
+            .flush_file()
+
+        while True:
+            status = self.open_ai.checking()
+            print(f'\tL create batch status: {status}')
+            if status == 'completed':
+                break
+            if status == 'failed':
+                raise RuntimeError(f'create batch failed : {self.open_ai.batch_create}')
+            time.sleep(5)
+
+        print(f'\tL retrieving...')
+        result = []
+        for line in self.open_ai.retrieve():
+            try:
+                content = json.loads(line['response']['body']['choices'][0]['message']['content'])
+            except (JSONDecodeError, KeyError) as e:
+                content = {
+                    "desc": str(e) + ' ' + json.dumps(line, ensure_ascii=False),
+                    "text": ''
+                }
+            request_id = line['custom_id']
+            content['requestId'] = request_id
+            content.update(temp[request_id])
+            result.append(content)
+
+        json.dump(result, self.output_file.open('w'), ensure_ascii=False, indent=2)

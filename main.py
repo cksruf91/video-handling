@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from core.chunking import VideoChunker
-from core.describe import ImageDescriptor
+from core.captioning import BatchImageCaptionWriter
 from core.extract_audio import AudioTextExtractor
 from core.extract_keyword import KeywordExtractor
 
@@ -35,7 +35,7 @@ class Main:
                 video_file=self.args.input, image_dir=self.args.temp
             ).run()
         if ('desc' in self.args.task) or ('all' in self.args.task):
-            ImageDescriptor(
+            BatchImageCaptionWriter(
                 video_file=self.args.input, image_dir=self.args.temp, output_file=self.args.output
             ).run()
         if ('keyword' in self.args.task) or ('all' in self.args.task):

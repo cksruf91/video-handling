@@ -1,58 +1,8 @@
-import base64
 from pathlib import Path
 from typing import Self
 
 from openai import OpenAI
 from openai.types.chat.chat_completion import ChatCompletion
-
-from model.image import ImageHandler
-
-
-class OpenAiVisionClient:
-
-    def __init__(self):
-        self.client = OpenAI()
-        self.model = "gpt-4o"
-        self.contents = []
-
-    def clear(self) -> None:
-        self.contents = []
-
-    def add_prompt(self, prompt) -> Self:
-        self.contents.append(
-            {
-                "type": "text",
-                "text": prompt,
-            },
-        )
-        return self
-
-    def add_image(self, image: ImageHandler | Path) -> Self:
-        if isinstance(image, ImageHandler):
-            base64_image = image.encoding()
-        elif isinstance(image, Path):
-            base64_image = base64.b64encode(image.open('rb').read()).decode('utf-8')
-        else:
-            raise RuntimeError('image must be ImageHandler or Path')
-
-        self.contents.append(
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                },
-            },
-        )
-        return self
-
-    def call(self, **kwargs) -> ChatCompletion:
-        return self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": 'user', "content": self.contents}
-            ],
-            **kwargs
-        )
 
 
 class OpenAiSTTClient:
@@ -94,10 +44,14 @@ class OpenAiClient:
         self.messages = []
         return self
 
-    def call(self, **kwargs) -> str:
+    def call(self, **kwargs) -> str | ChatCompletion:
+        if (_parsing := kwargs.get('parsing')) is not None:
+            _ = kwargs.pop('parsing')
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=self.messages,
             **kwargs
         )
-        return completion.choices[0].message.content
+        if _parsing:
+            return completion.choices[0].message.content
+        return completion
