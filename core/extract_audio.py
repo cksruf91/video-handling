@@ -1,14 +1,14 @@
 import json
 from pathlib import Path
 
+from client.openai.stt import OpenAISTTClient
 from model.audio import Audio
-from model.openai_client import OpenAiSTTClient
 
 
 class AudioTextExtractor:
     def __init__(self, video_file: Path, audio_dir: Path, output_file: Path):
         print('Extracting text from audio...')
-        self.open_ai = OpenAiSTTClient()
+        self.open_ai = OpenAISTTClient()
         self.audio_handler = Audio(video_file)
         self.audio_file = audio_dir.joinpath('audio.mp3')
         self.audio_file.parent.mkdir(exist_ok=True, parents=True)

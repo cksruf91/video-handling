@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from model.openai_client import OpenAiClient
+from client.openai.chat import OpenAIClient
 from utile.progress_bar import ProgressBar
 
 
@@ -10,7 +10,7 @@ class KeywordExtractor:
         print('Extracting keywords...')
         self.output_file = output_file
         self.data = json.load(self.output_file.open('r'))
-        self.open_ai = OpenAiClient()
+        self.open_ai = OpenAIClient()
         print(f'\tL output file : {self.output_file}')
 
         self.system_prompt = """
