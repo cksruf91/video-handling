@@ -24,8 +24,7 @@ class OpenAIClient:
         return self
 
     def call(self, **kwargs) -> str | ChatCompletion:
-        if (_parsing := kwargs.get('parsing')) is not None:
-            _ = kwargs.pop('parsing')
+        _parsing = kwargs.pop('parsing') if 'parsing' in kwargs else True
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=self.messages,

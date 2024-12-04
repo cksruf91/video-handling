@@ -12,7 +12,7 @@ class Arguments(argparse.ArgumentParser):
     def __init__(self):
         super().__init__()
         self.add_argument('-t', '--task', type=str, nargs='+', default='chunk',
-                          choices=['chunk', 'desc', 'stt', 'keyword', 'all'])
+                          choices=['chunk', 'cap', 'stt', 'keyword', 'all'])
         self.add_argument('-i', '--input', type=str, help='Video file to read')
         self.add_argument('-o', '--output', type=str, help='output json file')
         self.add_argument('-p', '--temp', type=str, help='temporary directory for jpg, mp3 files')
@@ -34,7 +34,7 @@ class Main:
             VideoChunker(
                 video_file=self.args.input, image_dir=self.args.temp
             ).run()
-        if ('desc' in self.args.task) or ('all' in self.args.task):
+        if ('cap' in self.args.task) or ('all' in self.args.task):
             BatchImageCaptionWriter(
                 video_file=self.args.input, image_dir=self.args.temp, output_file=self.args.output
             ).run()
