@@ -1,7 +1,9 @@
 import json
+import sys
 import time
 from json.decoder import JSONDecodeError
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -13,7 +15,7 @@ from utile.progress_bar import ProgressBar
 class ImageCaptionWriter:
 
     def __init__(self, video_file: Path, image_dir: Path, output_file: Path):
-        print("Describe frames...")
+        print("Captioning video...")
         self.output_file = output_file
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
         self.image_dir = image_dir.joinpath('frames')
@@ -69,10 +71,11 @@ class ImageCaptionWriter:
                     "desc": response.choices[0].message.content,
                     "text": str(e)
                 }
-            content['position'] = f"{min(times)}~{max(times)}"
-            content['groupId'] = gid
-            if isinstance(content['text'], list):
-                content['text'] = ' '.join(content['text'])
+            content.update({
+                'position': f"{min(times)}~{max(times)}",
+                'groupId': gid,
+                'text': ' '.join(content['text']) if isinstance(content['text'], list) else content['text']
+            })
             video_desc.append(content)
 
         desc_df = pl.DataFrame(video_desc, orient='row').sort('position')
@@ -88,11 +91,12 @@ class ImageCaptionWriter:
 class BatchImageCaptionWriter(ImageCaptionWriter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.open_ai = OpenAIBatchVisionClient(Path('temp/batch_data.jsonl'))
+        self._batch_file_dir = Path('temp')
+        self.open_ai = OpenAIBatchVisionClient(self._batch_file_dir)
         self.open_ai.flush_file()
 
-    def run(self):
-        temp = {}
+    def create_batch_file(self) -> dict[str, dict[str, Any]]:
+        requests = {}
         for gid in ProgressBar(self.group_id, bar_length=50, prefix='\t create batch file'):
             self.open_ai.prompt.add_text(self.prompt)
 
@@ -102,24 +106,30 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
                 times.append(file_name.name.split('_')[-2])
                 self.open_ai.prompt.add_image(file_name)
             _id = f"request_{gid}"
-            temp[_id] = {
+            requests[_id] = {
                 'time': f"{min(times)}~{max(times)}", 'groupId': gid
             }
             self.open_ai.write_prompt(request_id=_id)
+        return requests
 
+    def run(self):
+        requests = self.create_batch_file()
         self.open_ai \
+            .flush_file() \
             .upload() \
-            .create_batch() \
-            .flush_file()
+            .create_batch()
 
+        i = 0
         while True:
-            status = self.open_ai.checking()
-            print(f'\tL create batch status: {status}')
-            if status == 'completed':
+            i += 1
+            status = self.open_ai.get_status()
+            sys.stdout.write(f'\r\tL {i}] create batch status: {status}')
+            if all([s == 'completed' for b, s in status.items()]):
+                print('')
                 break
-            if status == 'failed':
-                raise RuntimeError(f'create batch failed : {self.open_ai.batch_create}')
-            time.sleep(5)
+            if any([s == 'failed' for b, s in status.items()]):
+                raise RuntimeError(f'create batch failed : {self.open_ai.batch_objects}')
+            time.sleep(10)
 
         print(f'\tL retrieving...')
         result = []
@@ -131,9 +141,15 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
                     "desc": str(e) + ' ' + json.dumps(line, ensure_ascii=False),
                     "text": ''
                 }
-            request_id = line['custom_id']
-            content['requestId'] = request_id
-            content.update(temp[request_id])
+            content.update({'requestId': line['custom_id']})
+            content.update(requests[line['custom_id']])
             result.append(content)
 
         json.dump(result, self.output_file.open('w'), ensure_ascii=False, indent=2)
+
+        error_file = self.output_file.parent.joinpath(self.output_file.stem + '_error.jsonl')
+        error = [e for e in self.open_ai.retrieve_error()]
+        if error:
+            json.dump(error, error_file.open('w'), ensure_ascii=False, indent=2)
+
+        self.open_ai.delete_files()

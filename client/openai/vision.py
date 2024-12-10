@@ -65,21 +65,28 @@ class OpenAIVisionClient:
 
 
 class OpenAIBatchVisionClient:
-    limitation = 50000
+    MAX_REQUESTS = 50000
+    MAX_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
 
-    def __init__(self, batch_file: Path):
+    def __init__(self, batch_file_dir: Path):
         super().__init__()
         self.client = OpenAI()
         self.prompt = _Prompt()
         self.model = "gpt-4o"
-        self.batch_file = batch_file
-        self._id = 0
-        self.upload_response: FileObject | None = None
-        self.batch_create: Batch | None = None
+        self._no = 0
+        self.batch_file_dir = batch_file_dir
+        self.batch_file_dir.parent.mkdir(parents=True, exist_ok=True)
+        self.file_objects: list[FileObject] = []
+        self.batch_objects: list[Batch] = []
 
     def flush_file(self) -> Self:
-        self.batch_file.unlink(missing_ok=True)
+        for file in self.batch_file_dir.glob('*.jsonl'):
+            file.unlink(missing_ok=True)
         return self
+
+    @property
+    def batch_file(self) -> Path:
+        return self.batch_file_dir.joinpath(f'batch_file_{self._no}.jsonl')
 
     def write_prompt(self, request_id: str) -> Self:
         line = json.dumps({
@@ -94,30 +101,53 @@ class OpenAIBatchVisionClient:
         }, ensure_ascii=False)
         self.batch_file.open('a').write(line + '\n')
         self.prompt.clear()
+        if self.batch_file.stat().st_size >= self.MAX_FILE_SIZE:
+            self._no += 1
         return self
 
     def upload(self) -> Self:
-        self.upload_response = self.client.files.create(
-            file=self.batch_file.open('rb'), purpose='batch'
-        )
+        for _file in self.batch_file_dir.glob('*.jsonl'):
+            print(f"\t upload file: {_file}")
+            self.file_objects.append(
+                self.client.files.create(
+                    file=_file.open('rb'), purpose='batch'
+                )
+            )
         return self
 
     def create_batch(self) -> Self:
-        self.batch_create = self.client.batches.create(
-            input_file_id=self.upload_response.id,
-            endpoint='/v1/chat/completions',
-            completion_window='24h',
-            metadata={
-                "description": "image captioning job"
-            }
-        )
+        for file in self.file_objects:
+            print(f"\t create batch: {file.filename}")
+            self.batch_objects.append(
+                self.client.batches.create(
+                    input_file_id=file.id,
+                    endpoint='/v1/chat/completions',
+                    completion_window='24h',
+                    metadata={"description": "image captioning job"}
+                )
+            )
         return self
 
-    def checking(self) -> str:
-        self.batch_create = self.client.batches.retrieve(self.batch_create.id)
-        return self.batch_create.status
+    def get_status(self) -> dict[str, str]:
+        for i in range(len(self.batch_objects)):
+            self.batch_objects[i] = self.client.batches.retrieve(self.batch_objects[i].id)
+        return {batch.id: batch.status for batch in self.batch_objects}
 
     def retrieve(self) -> Iterable[dict[str, Any]]:
-        file_response = self.client.files.content(self.batch_create.output_file_id)
-        for line in file_response.iter_lines():
-            yield json.loads(line)
+        for batch in self.batch_objects:
+            file_response = self.client.files.content(batch.output_file_id)
+            for line in file_response.iter_lines():
+                yield json.loads(line)
+
+    def retrieve_error(self) -> Iterable[dict[str, Any]]:
+        for batch in self.batch_objects:
+            if batch.error_file_id is not None:
+                file_response = self.client.files.content(batch.error_file_id)
+                for line in file_response.iter_lines():
+                    yield json.loads(line)
+
+    def delete_files(self) -> Self:
+        for file in self.file_objects:
+            output = self.client.files.delete(file.id)
+            print(f"delete result: {output}")
+        return self
