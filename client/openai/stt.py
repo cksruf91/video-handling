@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Self
 
@@ -6,7 +7,7 @@ from openai import OpenAI
 
 class OpenAISTTClient:
     def __init__(self):
-        self.client = OpenAI()
+        self.client = OpenAI(api_key=os.environ.get("OPENAI_KEY_VIDEO"))
         self.model = "whisper-1"
         self.audio_file = None
 

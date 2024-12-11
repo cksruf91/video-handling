@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 from pathlib import Path
 from typing import Self, Iterable, Any
 
@@ -50,7 +51,7 @@ class _Prompt:
 class OpenAIVisionClient:
     def __init__(self):
         super().__init__()
-        self.client = OpenAI()
+        self.client = OpenAI(api_key=os.environ.get("OPENAI_KEY_VIDEO"))
         self.prompt = _Prompt()
         self.model = "gpt-4o"
 
@@ -70,12 +71,11 @@ class OpenAIBatchVisionClient:
 
     def __init__(self, batch_file_dir: Path):
         super().__init__()
-        self.client = OpenAI()
+        self.client = OpenAI(api_key=os.environ.get("OPENAI_KEY_VIDEO"))
         self.prompt = _Prompt()
         self.model = "gpt-4o"
         self._no = 0
         self.batch_file_dir = batch_file_dir
-        self.batch_file_dir.parent.mkdir(parents=True, exist_ok=True)
         self.file_objects: list[FileObject] = []
         self.batch_objects: list[Batch] = []
 
@@ -96,7 +96,8 @@ class OpenAIBatchVisionClient:
             "body": {
                 "model": self.model,
                 "messages": [{"role": 'user', "content": self.prompt.contents}],
-                "max_tokens": 1000
+                "max_tokens": 3000,
+                # "response_format": "json_object"
             }
         }, ensure_ascii=False)
         self.batch_file.open('a').write(line + '\n')

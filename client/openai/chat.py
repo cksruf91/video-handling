@@ -1,3 +1,4 @@
+import os
 from typing import Self
 
 from openai import OpenAI
@@ -6,7 +7,7 @@ from openai.types.chat.chat_completion import ChatCompletion
 
 class OpenAIClient:
     def __init__(self):
-        self.client = OpenAI()
+        self.client = OpenAI(api_key=os.environ.get("OPENAI_KEY_VIDEO"))
         self.model = "gpt-4o-mini"
         self.messages = []
         self._role_pool = ["system", "assistant", "user"]
