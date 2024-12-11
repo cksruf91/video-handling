@@ -67,9 +67,9 @@ class ImageCaptionWriter:
             try:
                 content = json.loads(response.choices[0].message.content)
             except JSONDecodeError as e:
+                print('json parse error, gid : {}'.format(gid))
                 content = {
-                    "desc": response.choices[0].message.content,
-                    "text": str(e)
+                    "error": str(e) + ' ' + response.choices[0].message.content,
                 }
             content.update({
                 'position': f"{min(times)}~{max(times)}",
@@ -79,19 +79,14 @@ class ImageCaptionWriter:
             video_desc.append(content)
 
         desc_df = pl.DataFrame(video_desc, orient='row').sort('position')
-
-        if self.output_file.suffix == '.parquet':
-            desc_df.write_parquet(self.output_file)
-        elif self.output_file.suffix == '.json':
-            json.dump(desc_df.to_dicts(), self.output_file.open('w'), ensure_ascii=False, indent=2)
-        else:
-            RuntimeError(f'file extension not supported : {self.output_file.suffix}')
+        json.dump(desc_df.to_dicts(), self.output_file.open('w'), ensure_ascii=False, indent=2)
 
 
 class BatchImageCaptionWriter(ImageCaptionWriter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._batch_file_dir = Path('temp')
+        self._batch_file_dir.parent.mkdir(parents=True, exist_ok=True)
         self.open_ai = OpenAIBatchVisionClient(self._batch_file_dir)
         self.open_ai.flush_file()
 
@@ -115,9 +110,9 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
     def run(self):
         requests = self.create_batch_file()
         self.open_ai \
-            .flush_file() \
             .upload() \
-            .create_batch()
+            .create_batch() \
+            .flush_file()
 
         i = 0
         while True:
@@ -137,9 +132,9 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
             try:
                 content = json.loads(line['response']['body']['choices'][0]['message']['content'])
             except (JSONDecodeError, KeyError) as e:
+                print('json parse error, request_id : {}'.format(line['custom_id']))
                 content = {
-                    "desc": str(e) + ' ' + json.dumps(line, ensure_ascii=False),
-                    "text": ''
+                    "error": str(e) + ' ' + json.dumps(line, ensure_ascii=False),
                 }
             content.update({'requestId': line['custom_id']})
             content.update(requests[line['custom_id']])

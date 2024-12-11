@@ -31,6 +31,6 @@ class KeywordExtractor:
             full_text = row['desc'] + ' ' + row['text']
             self.open_ai \
                 .add_prompt(role='system', text=self.system_prompt) \
-                .add_prompt(role='system', text=self.user_prompt.format(full_text=full_text))
+                .add_prompt(role='user', text=self.user_prompt.format(full_text=full_text))
             row['keyword'] = self.open_ai.call()
         json.dump(self.data, self.output_file.open('w'), ensure_ascii=False, indent=2)
