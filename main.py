@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from core.captioning import BatchImageCaptionWriter
+from core.captioning import ImageCaptionWriter, BatchImageCaptionWriter
 from core.chunking import VideoChunker
 from core.extract_audio import AudioTextExtractor
 from core.extract_keyword import KeywordExtractor
@@ -17,12 +17,15 @@ class Arguments(argparse.ArgumentParser):
         self.add_argument('-i', '--input', type=str, help='Video file to read')
         self.add_argument('-o', '--output', type=str, help='output json file')
         self.add_argument('-p', '--temp', type=str, help='temporary directory for jpg, mp3 files')
+        self.add_argument('-b', '--batch_api', action='store_true',
+                          help='use batch api')
         arg = self.parse_args()
 
         self.task = arg.task
         self.input = Path(arg.input)
         self.output = Path(arg.output)
         self.temp = Path(arg.temp)
+        self.batch_api = arg.batch_api
 
 
 class Main:
@@ -38,7 +41,10 @@ class Main:
                 video_file=self.args.input, image_dir=self.args.temp
             ).run()
         if 'cap' in self.args.task:
-            BatchImageCaptionWriter(
+            task = ImageCaptionWriter
+            if self.args.batch_api:
+                task = BatchImageCaptionWriter
+            task(
                 video_file=self.args.input, image_dir=self.args.temp, output_file=self.args.output
             ).run()
         if 'keyword' in self.args.task:
