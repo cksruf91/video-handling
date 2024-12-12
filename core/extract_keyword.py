@@ -25,7 +25,8 @@ class KeywordExtractor:
         """
 
     def run(self) -> None:
-        for row in ProgressBar(self.data, max_value=len(self.data), bar_length=50, prefix='\t'):
+        caption = self.data.get('caption')
+        for row in ProgressBar(caption, max_value=len(caption), bar_length=50, prefix='\t'):
             if (row.get('desc') is None) | (row.get('text') is None):
                 continue
             full_text = row['desc'] + ' ' + row['text']

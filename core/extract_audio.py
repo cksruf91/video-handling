@@ -13,7 +13,7 @@ class AudioTextExtractor:
         self.audio_file = audio_dir.joinpath('audio.mp3')
         self.audio_file.parent.mkdir(exist_ok=True, parents=True)
         self.output_file = output_file
-        self.output = json.load(self.output_file.open('r'))
+        self.data = json.load(self.output_file.open('r'))
         print(f'\tL audio file : {self.audio_file}')
         print(f'\tL output file : {self.output_file}')
 
@@ -24,6 +24,6 @@ class AudioTextExtractor:
         text = self.open_ai \
             .set_audio_file(self.audio_file) \
             .call(temperature=0)
-        self.output.append({'stt': text})
+        self.data['stt'] = text
         print('\tL Done')
-        json.dump(self.output, self.output_file.open('w'), ensure_ascii=False, indent=2)
+        json.dump(self.data, self.output_file.open('w'), ensure_ascii=False, indent=2)

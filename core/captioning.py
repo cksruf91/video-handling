@@ -61,9 +61,15 @@ class ImageCaptionWriter:
                 'text': ' '.join(content['text']) if isinstance(content['text'], list) else content['text']
             })
             video_desc.append(content)
-
         desc_df = pl.DataFrame(video_desc, orient='row').sort('position')
-        json.dump(desc_df.to_dicts(), self.output_file.open('w'), ensure_ascii=False, indent=2)
+        self._save(desc_df.to_dicts(), self.output_file)
+
+    @staticmethod
+    def _save(result: list[dict[str, str]], file: Path):
+        data = {
+            'caption': result
+        }
+        json.dump(data, file.open('w'), ensure_ascii=False, indent=2)
 
 
 class BatchImageCaptionWriter(ImageCaptionWriter):
@@ -124,11 +130,11 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
             content.update(requests[line['custom_id']])
             result.append(content)
 
-        json.dump(result, self.output_file.open('w'), ensure_ascii=False, indent=2)
+        self._save(result, self.output_file)
 
         error_file = self.output_file.parent.joinpath(self.output_file.stem + '_error.jsonl')
         error = [e for e in self.open_ai.retrieve_error()]
         if error:
-            json.dump(error, error_file.open('w'), ensure_ascii=False, indent=2)
+            self._save(result, error_file)
 
         self.open_ai.delete_files()
