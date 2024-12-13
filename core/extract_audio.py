@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from client.openai.stt import OpenAISTTClient
-from model.audio import Audio
+from core.client.openai.stt import OpenAISTTClient
+from core.model.audio import Audio
 
 
 class AudioTextExtractor:

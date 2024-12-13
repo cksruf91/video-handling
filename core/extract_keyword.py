@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from client.openai.chat import OpenAIClient
+from core.client.openai.chat import OpenAIClient
 from core.prompt_manager import PromptManager
 from utile.progress_bar import ProgressBar
 

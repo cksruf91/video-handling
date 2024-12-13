@@ -1,9 +1,8 @@
 import base64
-from typing import Self
 import io
 from copy import deepcopy
 from pathlib import Path
-from typing import Union
+from typing import Self, Union
 
 import cv2
 import numpy as np

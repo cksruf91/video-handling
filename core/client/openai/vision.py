@@ -8,7 +8,7 @@ from openai import OpenAI
 from openai.types import Batch, FileObject
 from openai.types.chat.chat_completion import ChatCompletion
 
-from model.image import ImageHandler
+from core.model.image import ImageHandler
 
 
 class _Prompt:

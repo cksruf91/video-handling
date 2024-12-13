@@ -3,7 +3,7 @@ from typing import Tuple
 
 import cv2
 
-from model.image import ImageHandler
+from core.model.image import ImageHandler
 
 
 class _IterVideo:

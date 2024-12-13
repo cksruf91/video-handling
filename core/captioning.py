@@ -7,9 +7,9 @@ from typing import Any
 
 import polars as pl
 
-from client.openai.vision import OpenAIVisionClient, OpenAIBatchVisionClient
+from core.client.openai.vision import OpenAIVisionClient, OpenAIBatchVisionClient
+from core.model.video import Video
 from core.prompt_manager import PromptManager
-from model.video import Video
 from utile.progress_bar import ProgressBar
 
 

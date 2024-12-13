@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from model.image import ImageHandler
-from model.video import Video
+from core.model.image import ImageHandler
+from core.model.video import Video
 from utile.progress_bar import ProgressBar
 from utile.time_utils import minutes_sec_formating
 
