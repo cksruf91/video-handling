@@ -95,9 +95,9 @@ class OpenAIBatchVisionClient:
             "url": "/v1/chat/completions",
             "body": {
                 "model": self.model,
+                "response_format": {"type": "json_object"},
                 "messages": [{"role": 'user', "content": self.prompt.contents}],
                 "max_tokens": 3000,
-                # "response_format": "json_object"
             }
         }, ensure_ascii=False)
         self.batch_file.open('a').write(line + '\n')

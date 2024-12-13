@@ -47,9 +47,10 @@ class ImageCaptionWriter:
                 times.append(file_name.name.split('_')[-2])
                 self.open_ai.prompt.add_image(file_name)
 
-            response = self.open_ai.call()  # temperature=0.3,
+            response = self.open_ai.call(response_format={"type": "json_object"})  # temperature=0.3,
             try:
                 content = json.loads(response.choices[0].message.content)
+                content['text'] = ' '.join(content['text']) if isinstance(content['text'], list) else content['text']
             except JSONDecodeError as e:
                 print('json parse error, gid : {}'.format(gid))
                 content = {
@@ -58,7 +59,6 @@ class ImageCaptionWriter:
             content.update({
                 'position': f"{min(times)}~{max(times)}",
                 'groupId': gid,
-                'text': ' '.join(content['text']) if isinstance(content['text'], list) else content['text']
             })
             video_desc.append(content)
         desc_df = pl.DataFrame(video_desc, orient='row').sort('position')
