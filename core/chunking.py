@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from core.model.image import ImageHandler
 from core.model.video import Video
 from utile.progress_bar import ProgressBar
-from utile.time_utils import minutes_sec_formating
+from utile.utils import minutes_sec_formating, softmax
 
 
 class VideoChunker:
@@ -19,8 +19,10 @@ class VideoChunker:
         self.image_dir.mkdir(exist_ok=True, parents=True)
         print(f'\tL video file : {video_file}')
         print(f'\tL save dir : {self.image_dir}')
-        self.total_frames = self.video.frame_count
-        self._min_sim = 0.7
+        w, h, c = self.video.frame_size
+        self.target_size = (1080, 1920) if h > w else (1920, 1080)
+        print(f'\tL frame_size : {self.video.frame_size}')
+
         self.img_queue = deque()
         self.sim_queue = deque()
 
@@ -29,30 +31,36 @@ class VideoChunker:
         for jpg in self.image_dir.glob(pattern='*.jpg'):
             jpg.unlink()
 
-        prev_frame = ImageHandler(np.uint8(
-            np.random.randint(0, 255, self.video.frame_size)
-        ))
-        group_id, similarity = 0, 0.
+        prev_frame, prev_sim = None, None
+        group_id = 0
+        compute_size = [v//2 for v in self.target_size]
         task = ProgressBar(self.video.iter_frame(), max_value=self.video.frame_count, bar_length=50, prefix='\t')
+
+        # history = Path('temp/sims.csv')  # -------------------------------------------------------------------------
+        # history.open('w').write('frame,similarity,confidence\n')  # ------------------------------------------------
         for i, (frame, milli_sec) in enumerate(task):
             frame: ImageHandler
-            current_frame = frame.copy().resize(500, 250).grayscale().flat()
-            prev_frame = prev_frame.copy().resize(500, 250).grayscale().flat()
+            if prev_frame is None:
+                prev_frame = frame.copy()
+            current_frame = frame.copy().resize(*compute_size).grayscale().flat()
+            prev_frame = prev_frame.copy().resize(*compute_size).grayscale().flat()
             similarity = cosine_similarity([current_frame], [prev_frame])[0][0]
+            if prev_sim is None:
+                prev_sim = similarity
+            _diff = abs(similarity - prev_sim)
+
             task.update(suffix=f"{i}/{self.video.frame_count} frames / sim:{similarity:0.5f}")
-
             _confidence = self.confidence_limit(self.sim_queue)
+            # history.open('a').write(f'{i},{_diff},{_confidence}\n')  # ---------------------------------------------
 
-            if similarity < _confidence:
+            if _diff > _confidence:
                 self.sim_queue.clear()
                 if len(self.img_queue) > 1:
                     self.save_frame_group(self.img_queue, group_id)
                 self.img_queue.clear()
                 group_id += 1
-                self.sim_queue.append(self._min_sim)
             else:
-                self.sim_queue.append(similarity)
-
+                self.sim_queue.append(_diff)
             self.img_queue.append((frame, i, milli_sec))
             prev_frame = frame
 
@@ -68,14 +76,18 @@ class VideoChunker:
             save_frame, no, milli_sec = q[idx]
             position = minutes_sec_formating(milli_sec)
             save_file = self.image_dir.joinpath(f'frame_{group_id:04d}_{position}_{no:05d}.jpg')
-            if not save_frame.write(save_file):
+            if not save_frame.resize(*self.target_size).write(save_file):
                 raise Exception(f'failed to write {save_file.absolute()}')
 
-    def confidence_limit(self, sims: deque[float]) -> float:
+    @staticmethod
+    def confidence_limit(sims: deque[float]) -> float:
+        if not sims:
+            return 1
+        sims = list(sims)[-30:]
         if len(sims) < 2:
-            return self._min_sim
-        _mu = np.mean(sims)
+            return sims[-1] * 2
+        w = softmax(len(sims))
+        _mu: float = sum([v * w for v, w in zip(sims, w)])  # 가중 평균
         _s = np.std(sims)
-        _n = max(len(sims), 10)
-        score = _mu - (1.96 * _s / np.sqrt(_n))  # 신뢰수준 99%
-        return max(score.item(), self._min_sim)
+        score = _mu + (6 * _s)
+        return max(score, 0.001)
