@@ -19,7 +19,7 @@ class ImageCaptionWriter:
     def __init__(self, video_file: Path, image_dir: Path, output_file: Path):
         print("Captioning video...")
         self.output_file = output_file
-        self.output_file.parent.mkdir(parents=True, exist_ok=True)
+        self.output = json.load(self.output_file.open('r'))
         self.image_dir = image_dir.joinpath('frames')
         self.video = Video(video_file)
         self.open_ai = OpenAIVisionClient()
@@ -37,9 +37,15 @@ class ImageCaptionWriter:
 
     def run(self):
         video_desc = []
+        title = self.output.get('title')
+        location = self.output.get('location')
+        prompt = self.PROMPT.CAPTIONING + '\n' + \
+                 f"<영상제목>{title}</영상제목>" + '\n' + \
+                 f"<지역>{location}</지역>"
+
         for gid in ProgressBar(self.group_id, bar_length=50, prefix='\t'):
             self.open_ai.prompt.clear()
-            self.open_ai.prompt.add_text(self.PROMPT.CAPTIONING)
+            self.open_ai.prompt.add_text(prompt)
 
             times = []
             files = sorted(list(self.image_dir.glob(f'frame_{gid:04d}_*.jpg')))
@@ -51,10 +57,10 @@ class ImageCaptionWriter:
             try:
                 content = json.loads(response.choices[0].message.content)
                 content['text'] = ' '.join(content['text']) if isinstance(content['text'], list) else content['text']
-            except JSONDecodeError as e:
-                print('json parse error, gid : {}'.format(gid))
+            except (JSONDecodeError, TypeError) as e:
+                print('json parse error, gid : {}, {}'.format(gid, response))
                 content = {
-                    "error": str(e) + ' ' + response.choices[0].message.content,
+                    "error": f"[{str(e)}] -> {response}",
                 }
             content.update({
                 'position': f"{min(times)}~{max(times)}",
@@ -64,12 +70,9 @@ class ImageCaptionWriter:
         desc_df = pl.DataFrame(video_desc, orient='row').sort('position')
         self._save(desc_df.to_dicts(), self.output_file)
 
-    @staticmethod
-    def _save(result: list[dict[str, str]], file: Path):
-        data = {
-            'caption': result
-        }
-        json.dump(data, file.open('w'), ensure_ascii=False, indent=2)
+    def _save(self, result: list[dict[str, str]], file: Path):
+        self.output['caption'] = result
+        json.dump(self.output, file.open('w'), ensure_ascii=False, indent=2)
 
 
 class BatchImageCaptionWriter(ImageCaptionWriter):
@@ -82,8 +85,14 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
 
     def create_batch_file(self) -> dict[str, dict[str, Any]]:
         requests = {}
+        title = self.output.get('title')
+        location = self.output.get('location')
+        prompt = self.PROMPT.CAPTIONING + '\n' + \
+                 f"<영상제목>{title}</영상제목>" + '\n' + \
+                 f"<지역>{location}</지역>"
+
         for gid in ProgressBar(self.group_id, bar_length=50, prefix='\t create batch file'):
-            self.open_ai.prompt.add_text(self.PROMPT.CAPTIONING)
+            self.open_ai.prompt.add_text(prompt)
 
             times = []
             files = sorted(list(self.image_dir.glob(f'frame_{gid:04d}_*.jpg')))

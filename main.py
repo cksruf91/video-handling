@@ -54,9 +54,7 @@ class Main:
                 video_file=self.args.input, audio_dir=self.args.temp, output_file=self.args.output
             ).run()
         if 'summary' in self.args.task:
-            CaptionTextSummarizer(
-                video_file=self.args.input, output_file=self.args.output
-            ).run()
+            CaptionTextSummarizer(output_file=self.args.output).run()
 
 
 if __name__ == '__main__':

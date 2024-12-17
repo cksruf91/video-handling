@@ -10,42 +10,52 @@ from utile.progress_bar import ProgressBar
 class CaptionTextSummarizer:
     PROMPT = PromptManager()
 
-    def __init__(self, video_file: Path, output_file: Path):
+    def __init__(self, output_file: Path):
         print('Summarize Video...')
         self.output_file = output_file
-        self.title = video_file.stem
         self.data = json.load(self.output_file.open('r'))
+        self.title = self.data.get('title')
         self.open_ia = OpenAIClient()
         print(f'\tL output file : {self.output_file}')
         print(f'\tL title : {self.title}')
 
     def _build_prompt(self) -> str:
         prompt = ''
-        prompt += "<Title>" + self.title + "</Title>" + '\n'
-
+        prompt += "<Title>" + self.title + "</Title>" + "\n"
+        prompt += "<VideoFrames>" + "\n"
         for row in ProgressBar(self.data.get('caption'), bar_length=50, prefix='\t'):
             if (row.get('desc') is None) | (row.get('text') is None):
                 continue
-            prompt += "<VideoFrame>" + '\n'
-            prompt += "\t<Caption>" + row.get('desc').replace('\n', ' ') + "</Caption>" + '\n'
-            prompt += "\t<Subtitle>" + row.get('text').replace('\n', ' ') + "</Subtitle>" + '\n'
-            prompt += "</VideoFrame>" + '\n'
+            _id = row.get('groupId')
+            prompt += f"  <VideoFrame{_id}>" + "\n"
+            prompt += "    <Caption>" + row.get('desc').replace('\n', ' ') + "</Caption>" + "\n"
+            prompt += "    <Subtitle>" + row.get('text').replace('\n', ' ') + "</Subtitle>" + "\n"
+            prompt += f"  </VideoFrame{_id}>" + "\n"
+        prompt += "</VideoFrames>"
         return prompt
 
     def run(self):
         user_prompt = self._build_prompt()
-        self.open_ia.add_prompt(role='system', text=self.PROMPT.SUMMARY)
+        self.open_ia.add_prompt(role='system', text=self.PROMPT.SUMMARY_SYSTEM)
+        self.open_ia.add_prompt(role='user', text=self.PROMPT.SUMMARY_USER)
+        self.open_ia.add_prompt(role='assistant', text=self.PROMPT.SUMMARY_ASSIST)
+        self.open_ia.add_prompt(role='system', text=self.PROMPT.SUMMARY_SYSTEM)
         self.open_ia.add_prompt(role='user', text=user_prompt)
         print('\tL request progress...')
 
-        response = self.open_ia.call(response_format={"type": "json_object"}, temperature=1.0, parsing=True)
+        response = self.open_ia.call(
+            response_format={"type": "json_object"},
+            temperature=0.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            parsing=True)
         try:
             response = json.loads(response)
         except JSONDecodeError as e:
             print('json parse error')
             print(response)
             raise e
-
+        print(response)
         self.data.update(response)
         self.output_file.open('w').write(
             json.dumps(self.data, ensure_ascii=False, indent=2)
