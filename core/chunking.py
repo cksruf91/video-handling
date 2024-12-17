@@ -17,10 +17,10 @@ class VideoChunker:
         self.video = Video(video_file)
         self.image_dir = image_dir.joinpath('frames')
         self.image_dir.mkdir(exist_ok=True, parents=True)
-        print(f'\tL video file : {video_file}')
-        print(f'\tL save dir : {self.image_dir}')
         w, h, c = self.video.frame_size
         self.target_size = (1080, 1920) if h > w else (1920, 1080)
+        print(f'\tL video file : {video_file}')
+        print(f'\tL save dir : {self.image_dir}')
         print(f'\tL frame_size : {self.video.frame_size}')
 
         self.img_queue = deque()
@@ -33,7 +33,7 @@ class VideoChunker:
 
         prev_frame, prev_sim = None, None
         group_id = 0
-        compute_size = [v//2 for v in self.target_size]
+        compute_size = [v // 2 for v in self.target_size]
         task = ProgressBar(self.video.iter_frame(), max_value=self.video.frame_count, bar_length=50, prefix='\t')
 
         # history = Path('temp/sims.csv')  # -------------------------------------------------------------------------

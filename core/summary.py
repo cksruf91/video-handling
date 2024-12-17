@@ -14,14 +14,12 @@ class CaptionTextSummarizer:
         print('Summarize Video...')
         self.output_file = output_file
         self.data = json.load(self.output_file.open('r'))
-        self.title = self.data.get('title')
         self.open_ia = OpenAIClient()
         print(f'\tL output file : {self.output_file}')
-        print(f'\tL title : {self.title}')
 
     def _build_prompt(self) -> str:
         prompt = ''
-        prompt += "<Title>" + self.title + "</Title>" + "\n"
+        prompt += "<Title>" + self.data.get('title') + "</Title>" + "\n"
         prompt += "<VideoFrames>" + "\n"
         for row in ProgressBar(self.data.get('caption'), bar_length=50, prefix='\t'):
             if (row.get('desc') is None) | (row.get('text') is None):
@@ -32,6 +30,7 @@ class CaptionTextSummarizer:
             prompt += "    <Subtitle>" + row.get('text').replace('\n', ' ') + "</Subtitle>" + "\n"
             prompt += f"  </VideoFrame{_id}>" + "\n"
         prompt += "</VideoFrames>"
+        prompt += "<Speech>" + self.data.get('stt') + "</Speech>" + "\n"
         return prompt
 
     def run(self):
@@ -55,7 +54,7 @@ class CaptionTextSummarizer:
             print('json parse error')
             print(response)
             raise e
-        print(response)
+
         self.data.update(response)
         self.output_file.open('w').write(
             json.dumps(self.data, ensure_ascii=False, indent=2)
