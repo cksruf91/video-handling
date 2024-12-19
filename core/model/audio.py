@@ -20,3 +20,6 @@ class Audio:
 
     def extract_audio(self, audio_file: Path, file_format: str = 'mp3'):
         self.audio.export(audio_file, format=file_format)
+
+    def __len__(self):
+        return len(self.audio)

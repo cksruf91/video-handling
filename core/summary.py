@@ -47,13 +47,20 @@ class Summarizer:
             temperature=0.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            parsing=True)
+            parsing=False
+        )
+        cost = {
+            'completion_tokens': response.usage.completion_tokens,
+            'cached_tokens': response.usage.prompt_tokens_details.cached_tokens,
+            'prompt_tokens': response.usage.prompt_tokens,
+        }
+
         try:
-            response = json.loads(response)
+            response = json.loads(response.choices[0].message.content)
         except JSONDecodeError as e:
-            print('json parse error')
             print(response)
             raise e
+        self.data['summary_cost'] = cost
 
         self.data.update(response)
         self.output_file.open('w').write(

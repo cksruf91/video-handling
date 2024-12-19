@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Self
 
 from openai import OpenAI
+from openai.types.audio import Transcription
 
 
 class OpenAISTTClient:
@@ -15,11 +16,14 @@ class OpenAISTTClient:
         self.audio_file = file
         return self
 
-    def call(self, **kwargs) -> str:
+    def call(self, **kwargs) -> Transcription | str:
+        _parsing = kwargs.pop('parsing') if 'parsing' in kwargs else True
         audio_file = open(self.audio_file, "rb")
         transcription = self.client.audio.transcriptions.create(
             model=self.model,
             file=audio_file,
             **kwargs
         )
-        return transcription.text
+        if _parsing:
+            return transcription.text
+        return transcription

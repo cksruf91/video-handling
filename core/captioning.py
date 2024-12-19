@@ -37,8 +37,19 @@ class ImageCaptionWriter:
 
     def get_caption(self, gid: int) -> dict[str, str]:
         response = None
+        cost = {
+            'completion_tokens': 0,
+            'cached_tokens': 0,
+            'prompt_tokens': 0,
+            'image': 0,
+        }
+
         for i in range(3):
             response = self.open_ai.call(response_format={"type": "json_object"}, temperature=1.)
+            cost['completion_tokens'] += response.usage.completion_tokens
+            cost['cached_tokens'] += response.usage.prompt_tokens_details.cached_tokens
+            cost['prompt_tokens'] += response.usage.prompt_tokens
+            cost['image'] += len([1 for c in self.open_ai.prompt.contents if c.get('type') == 'image_url'])
             try:
                 content = json.loads(response.choices[0].message.content)
             except (JSONDecodeError, TypeError) as _:
@@ -46,10 +57,13 @@ class ImageCaptionWriter:
                 continue
             _text = content.get('text')
             content['text'] = ' '.join(_text) if isinstance(_text, list) else _text
+            content['cost'] = cost
+
             return content
         print(f"failed to process image, group id: {gid}")
         return {
             "error": f"{response}",
+            "cost": cost,
         }
 
     def run(self):

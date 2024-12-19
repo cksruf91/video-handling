@@ -24,6 +24,8 @@ class AudioTextExtractor:
         text = self.open_ai \
             .set_audio_file(self.audio_file) \
             .call(temperature=0)
-        self.data['stt'] = text
+        self.data.update({
+            'stt': text, 'audio_length': len(self.audio_handler)
+        })
         print('\tL Done')
         json.dump(self.data, self.output_file.open('w'), ensure_ascii=False, indent=2)
