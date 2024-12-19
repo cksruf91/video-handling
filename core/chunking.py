@@ -42,8 +42,8 @@ class VideoChunker:
             frame: ImageHandler
             if prev_frame is None:
                 prev_frame = frame.copy()
-            current_frame = frame.copy().resize(*compute_size).grayscale().flat()
-            prev_frame = prev_frame.copy().resize(*compute_size).grayscale().flat()
+            current_frame = frame.copy().resize(*compute_size).blur().grayscale().flat()
+            prev_frame = prev_frame.copy().resize(*compute_size).blur().grayscale().flat()
             similarity = cosine_similarity([current_frame], [prev_frame])[0][0]
             if prev_sim is None:
                 prev_sim = similarity
@@ -81,13 +81,11 @@ class VideoChunker:
 
     @staticmethod
     def confidence_limit(sims: deque[float]) -> float:
-        if not sims:
+        if len(sims) < 5:
             return 1
         sims = list(sims)[-30:]
-        if len(sims) < 2:
-            return sims[-1] * 2
         w = softmax(len(sims))
         _mu: float = sum([v * w for v, w in zip(sims, w)])  # 가중 평균
         _s = np.std(sims)
         score = _mu + (6 * _s)
-        return max(score, 0.001)
+        return max(score, 0.01)

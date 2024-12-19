@@ -56,7 +56,8 @@ class ImageCaptionWriter:
             response = self.open_ai.call(response_format={"type": "json_object"})  # temperature=0.3,
             try:
                 content = json.loads(response.choices[0].message.content)
-                content['text'] = ' '.join(content['text']) if isinstance(content['text'], list) else content['text']
+                _text = content.get('text')
+                content['text'] = ' '.join(_text) if isinstance(_text, list) else _text
             except (JSONDecodeError, TypeError) as e:
                 print('json parse error, gid : {}, {}'.format(gid, response))
                 content = {

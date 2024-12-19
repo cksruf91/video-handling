@@ -62,3 +62,7 @@ class ImageHandler:
     def hist_eq(self):
         self._image = cv2.equalizeHist(self._image)
         return self
+
+    def blur(self, ksize=(15, 15)):
+        self._image = cv2.GaussianBlur(self._image, ksize, 0)
+        return self
