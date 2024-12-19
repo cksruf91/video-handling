@@ -7,7 +7,7 @@ from core.prompt_manager import PromptManager
 from utile.progress_bar import ProgressBar
 
 
-class CaptionTextSummarizer:
+class Summarizer:
     PROMPT = PromptManager()
 
     def __init__(self, output_file: Path):
@@ -25,12 +25,12 @@ class CaptionTextSummarizer:
             if (row.get('desc') is None) | (row.get('text') is None):
                 continue
             _id = row.get('groupId')
-            prompt += f"  <VideoFrame{_id}>" + "\n"
+            prompt += f"  <VideoFrame index={_id}>" + "\n"
             prompt += "    <Caption>" + row.get('desc').replace('\n', ' ') + "</Caption>" + "\n"
             prompt += "    <Subtitle>" + row.get('text').replace('\n', ' ') + "</Subtitle>" + "\n"
-            prompt += f"  </VideoFrame{_id}>" + "\n"
+            prompt += f"  </VideoFrame index={_id}>" + "\n"
         prompt += "</VideoFrames>"
-        prompt += "<Speech>" + self.data.get('stt') + "</Speech>" + "\n"
+        # prompt += "<Speech>" + self.data.get('stt') + "</Speech>" + "\n"
         return prompt
 
     def run(self):

@@ -88,7 +88,7 @@ class OpenAIBatchVisionClient:
     def batch_file(self) -> Path:
         return self.batch_file_dir.joinpath(f'batch_file_{self._no}.jsonl')
 
-    def write_prompt(self, request_id: str) -> Self:
+    def write_prompt(self, request_id: str, **kwargs) -> Self:
         line = json.dumps({
             "custom_id": request_id,
             "method": "POST",

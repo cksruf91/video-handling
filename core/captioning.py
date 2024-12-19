@@ -35,6 +35,23 @@ class ImageCaptionWriter:
             group_ids.add(int(_file.name.split('_')[1]))
         return list(group_ids)
 
+    def get_caption(self, gid: int) -> dict[str, str]:
+        response = None
+        for i in range(3):
+            response = self.open_ai.call(response_format={"type": "json_object"}, temperature=1.)
+            try:
+                content = json.loads(response.choices[0].message.content)
+            except (JSONDecodeError, TypeError) as _:
+                print('json parse error, {}'.format(response))
+                continue
+            _text = content.get('text')
+            content['text'] = ' '.join(_text) if isinstance(_text, list) else _text
+            return content
+        print(f"failed to process image, group id: {gid}")
+        return {
+            "error": f"{response}",
+        }
+
     def run(self):
         video_desc = []
         title = self.output.get('title')
@@ -53,16 +70,7 @@ class ImageCaptionWriter:
                 times.append(file_name.name.split('_')[-2])
                 self.open_ai.prompt.add_image(file_name)
 
-            response = self.open_ai.call(response_format={"type": "json_object"})  # temperature=0.3,
-            try:
-                content = json.loads(response.choices[0].message.content)
-                _text = content.get('text')
-                content['text'] = ' '.join(_text) if isinstance(_text, list) else _text
-            except (JSONDecodeError, TypeError) as e:
-                print('json parse error, gid : {}, {}'.format(gid, response))
-                content = {
-                    "error": f"[{str(e)}] -> {response}",
-                }
+            content = self.get_caption(gid)
             content.update({
                 'position': f"{min(times)}~{max(times)}",
                 'groupId': gid,

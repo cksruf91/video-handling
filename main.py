@@ -5,7 +5,7 @@ from core.captioning import ImageCaptionWriter, BatchImageCaptionWriter
 from core.chunking import VideoChunker
 from core.extract_audio import AudioTextExtractor
 from core.extract_keyword import KeywordExtractor
-from core.summary import CaptionTextSummarizer
+from core.summary import Summarizer
 
 
 class Arguments(argparse.ArgumentParser):
@@ -34,7 +34,7 @@ class Main:
 
     def run(self):
         if 'all' in self.args.task:
-            self.args.task = ['chunk', 'cap', 'summary', 'stt']
+            self.args.task = ['chunk', 'cap', 'stt', 'summary']
         print(f"task: {self.args.task}")
         if 'chunk' in self.args.task:
             VideoChunker(
@@ -54,7 +54,7 @@ class Main:
                 video_file=self.args.input, audio_dir=self.args.temp, output_file=self.args.output
             ).run()
         if 'summary' in self.args.task:
-            CaptionTextSummarizer(output_file=self.args.output).run()
+            Summarizer(output_file=self.args.output).run()
 
 
 if __name__ == '__main__':
