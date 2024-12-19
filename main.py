@@ -5,6 +5,7 @@ from core.captioning import ImageCaptionWriter, BatchImageCaptionWriter
 from core.chunking import VideoChunker
 from core.extract_audio import AudioTextExtractor
 from core.extract_keyword import KeywordExtractor
+from core.priceing import Price
 from core.summary import Summarizer
 
 
@@ -13,7 +14,7 @@ class Arguments(argparse.ArgumentParser):
     def __init__(self):
         super().__init__()
         self.add_argument('-t', '--task', type=str, nargs='+', default='chunk',
-                          choices=['chunk', 'cap', 'stt', 'keyword', 'summary', 'all'])
+                          choices=['chunk', 'cap', 'stt', 'keyword', 'summary', 'all', 'price'])
         self.add_argument('-i', '--input', type=str, help='Video file to read')
         self.add_argument('-o', '--output', type=str, help='output json file')
         self.add_argument('-p', '--temp', type=str, help='temporary directory for jpg, mp3 files')
@@ -55,6 +56,8 @@ class Main:
             ).run()
         if 'summary' in self.args.task:
             Summarizer(output_file=self.args.output).run()
+        if 'price' in self.args.task:
+            Price(output_file=self.args.output).run()
 
 
 if __name__ == '__main__':
