@@ -5,7 +5,7 @@ from core.captioning import ImageCaptionWriter, BatchImageCaptionWriter
 from core.chunking import VideoChunker
 from core.extract_audio import AudioTextExtractor
 from core.extract_keyword import KeywordExtractor
-from core.priceing import Price
+from core.pricing import Price
 from core.summary import Summarizer
 
 
@@ -35,7 +35,7 @@ class Main:
 
     def run(self):
         if 'all' in self.args.task:
-            self.args.task = ['chunk', 'cap', 'stt', 'summary']
+            self.args.task.extend(['chunk', 'cap', 'stt', 'summary'])
         print(f"task: {self.args.task}")
         if 'chunk' in self.args.task:
             VideoChunker(
