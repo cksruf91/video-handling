@@ -53,7 +53,7 @@ class OpenAIVisionClient:
         super().__init__()
         self.client = OpenAI(api_key=os.environ.get("OPENAI_KEY_VIDEO"))
         self.prompt = _Prompt()
-        self.model = "gpt-4o"
+        self.model = "gpt-4o-mini"
 
     def call(self, **kwargs) -> ChatCompletion:
         return self.client.chat.completions.create(
@@ -67,7 +67,7 @@ class OpenAIVisionClient:
 
 class OpenAIBatchVisionClient:
     MAX_REQUESTS = 50000
-    MAX_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
+    MAX_FILE_SIZE = 190 * 1024 * 1024  # 200 MB
 
     def __init__(self, batch_file_dir: Path):
         super().__init__()
@@ -88,17 +88,18 @@ class OpenAIBatchVisionClient:
     def batch_file(self) -> Path:
         return self.batch_file_dir.joinpath(f'batch_file_{self._no}.jsonl')
 
-    def write_prompt(self, request_id: str, **kwargs) -> Self:
+    def write_request(self, request_id: str, **kwargs) -> Self:
+        _body = {
+            "model": self.model,
+            "messages": [{"role": 'user', "content": self.prompt.contents}],
+            "max_tokens": 3000,
+        }
+        _body.update(kwargs)
         line = json.dumps({
             "custom_id": request_id,
             "method": "POST",
             "url": "/v1/chat/completions",
-            "body": {
-                "model": self.model,
-                "response_format": {"type": "json_object"},
-                "messages": [{"role": 'user', "content": self.prompt.contents}],
-                "max_tokens": 3000,
-            }
+            "body": _body
         }, ensure_ascii=False)
         self.batch_file.open('a').write(line + '\n')
         self.prompt.clear()

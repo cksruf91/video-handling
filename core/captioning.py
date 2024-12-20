@@ -124,9 +124,10 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
                 self.open_ai.prompt.add_image(file_name)
             _id = f"request_{gid}"
             requests[_id] = {
+                'image': len(files),
                 'time': f"{min(times)}~{max(times)}", 'groupId': gid
             }
-            self.open_ai.write_prompt(request_id=_id)
+            self.open_ai.write_request(request_id=_id, response_format={"type": "json_object"}, temperature=0.)
         return requests
 
     def run(self):
@@ -158,7 +159,13 @@ class BatchImageCaptionWriter(ImageCaptionWriter):
                 content = {
                     "error": str(e) + ' ' + json.dumps(line, ensure_ascii=False),
                 }
-            content.update({'requestId': line['custom_id']})
+            usage = line['response']['body']['usage']
+            content.update({
+                'requestId': line['custom_id'],
+                'completion_tokens': usage['completion_tokens'],
+                'cached_tokens': usage['prompt_tokens_details']['cached_tokens'],
+                'prompt_tokens': usage['prompt_tokens'],
+            })
             content.update(requests[line['custom_id']])
             result.append(content)
 
