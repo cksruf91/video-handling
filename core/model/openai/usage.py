@@ -6,11 +6,12 @@ from core.model.openai.price import Pricing
 
 @dataclass
 class Usage:
-    prompt_tokens: int = field(default=0, init=False)
-    cached_prompt_tokens: int = field(default=0, init=False)
-    completion_tokens: int = field(default=0, init=False)
-    image_count: int = field(default=0, init=False)
-    audio_length: int = field(default=0, init=False)
+    prompt_tokens: int = field(default=0)
+    cached_prompt_tokens: int = field(default=0)
+    completion_tokens: int = field(default=0)
+    image_count: int = field(default=0)
+    audio_length: int = field(default=0)
+    model: str = field(default='', init=False)
 
     _1m: int = field(default=1000000, init=False, repr=False)
     _amount: dict[str, float] = field(default_factory=dict, init=False, repr=False)
@@ -39,6 +40,7 @@ class Usage:
             'image': self.image_amount(price),
             'audio': self.audio_amount(price),
         }
+        self.model = price.name
         return self
 
     def total(self) -> float:
@@ -48,7 +50,12 @@ class Usage:
             self._amount.get('image') + \
             self._amount.get('audio')
 
-    def to_json(self):
-        return {
-            f.name: f"{getattr(self, f.name):,}" for f in fields(self) if f.repr and (getattr(self, f.name) != 0)
-        }
+    def usages(self):
+        usage = {}
+        for f in fields(self):
+            if f.repr and (getattr(self, f.name) != 0):
+                if (f.type == int) or (f.type == float):
+                    usage[f.name] = f"{getattr(self, f.name):,}"
+                else:
+                    usage[f.name] = f"{getattr(self, f.name)}"
+        return usage
