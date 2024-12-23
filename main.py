@@ -42,9 +42,7 @@ class Main:
                 video_file=self.args.input, image_dir=self.args.temp
             ).run()
         if 'cap' in self.args.task:
-            task = ImageCaptionWriter
-            if self.args.batch_api:
-                task = BatchImageCaptionWriter
+            task = BatchImageCaptionWriter if self.args.batch_api else ImageCaptionWriter
             task(
                 video_file=self.args.input, image_dir=self.args.temp, output_file=self.args.output
             ).run()
