@@ -152,4 +152,7 @@ class OpenAIBatchVisionClient:
         for file in self.file_objects:
             output = self.client.files.delete(file.id)
             print(f"delete result: {output}")
+        for file in self.batch_objects:
+            output = self.client.files.delete(file.output_file_id)
+            print(f"delete result: {output}")
         return self
