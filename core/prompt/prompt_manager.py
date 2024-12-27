@@ -4,7 +4,7 @@ import yaml
 
 
 class PromptManager:
-    _FILE = Path('.').joinpath('core').joinpath('resource').joinpath('prompt.yaml')
+    _FILE = Path('.').joinpath('resource').joinpath('prompt.yaml')
     _PROMPT = yaml.safe_load(_FILE.open('r'))
 
     SUMMARY_SYSTEM = _PROMPT.get('app').get('summary').get('v1').get('sys_prompt')

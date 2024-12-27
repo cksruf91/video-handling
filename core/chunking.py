@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+from common.utile.progress_bar import ProgressBar
+from common.utile.utils import minutes_sec_formating, softmax
 from core.model.image import ImageHandler
 from core.model.video import Video
-from utile.progress_bar import ProgressBar
-from utile.utils import minutes_sec_formating, softmax
 
 
 class VideoChunker:

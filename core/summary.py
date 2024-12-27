@@ -2,9 +2,9 @@ import json
 from json.decoder import JSONDecodeError
 from pathlib import Path
 
-from core.client.openai.chat import OpenAIClient
-from core.prompt_manager import PromptManager
-from utile.progress_bar import ProgressBar
+from common.client.openai.chat import OpenAIClient
+from common.utile.progress_bar import ProgressBar
+from core.prompt.prompt_manager import PromptManager
 
 
 class Summarizer:

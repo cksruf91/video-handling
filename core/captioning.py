@@ -7,10 +7,10 @@ from typing import Any
 
 import polars as pl
 
-from core.client.openai.vision import OpenAIVisionClient, OpenAIBatchVisionClient
+from common.client.openai.vision import OpenAIVisionClient, OpenAIBatchVisionClient
+from common.utile.progress_bar import ProgressBar
 from core.model.video import Video
-from core.prompt_manager import PromptManager
-from utile.progress_bar import ProgressBar
+from core.prompt.prompt_manager import PromptManager
 
 
 class ImageCaptionWriter:

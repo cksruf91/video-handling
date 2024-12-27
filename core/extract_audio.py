@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from core.client.openai.stt import OpenAISTTClient
+from common.client.openai.stt import OpenAISTTClient
 from core.model.audio import Audio
 
 
