@@ -28,9 +28,9 @@ class Summarizer:
             prompt += f"  <VideoFrame index={_id}>" + "\n"
             prompt += "    <Caption>" + row.get('desc').replace('\n', ' ') + "</Caption>" + "\n"
             prompt += "    <Subtitle>" + row.get('text').replace('\n', ' ') + "</Subtitle>" + "\n"
+            prompt += "    <Location>" + row.get('location') + " </Location>" + "\n"
             prompt += f"  </VideoFrame index={_id}>" + "\n"
         prompt += "</VideoFrames>"
-        # prompt += "<Speech>" + self.data.get('stt') + "</Speech>" + "\n"
         return prompt
 
     def run(self):
@@ -38,7 +38,6 @@ class Summarizer:
         self.open_ia.add_prompt(role='system', text=self.PROMPT.SUMMARY_SYSTEM)
         self.open_ia.add_prompt(role='user', text=self.PROMPT.SUMMARY_USER)
         self.open_ia.add_prompt(role='assistant', text=self.PROMPT.SUMMARY_ASSIST)
-        self.open_ia.add_prompt(role='system', text=self.PROMPT.SUMMARY_SYSTEM)
         self.open_ia.add_prompt(role='user', text=user_prompt)
         print('\tL request progress...')
 
